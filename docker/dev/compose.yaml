@@ -1,0 +1,26 @@
+services:
+  database:
+    image: postgres:15-alpine
+    container_name: fastapi-postgres-database
+    environment:
+      - POSTGRES_DB=fastapi_db
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin
+    ports:
+      - "5433:5432"
+
+  api:
+    build:
+      context: ../..
+      dockerfile: docker/dev/Dockerfile
+    container_name: fastapi-dev-api
+    volumes:
+      - "../../app:/project/app"
+      - "../../main.py:/project/main.py"
+      - "../../alembic/versions:/project/alembic/versions"
+    ports:
+      - "8000:8000"
+    env_file:
+      - "../../.env"
+    depends_on:
+        - database

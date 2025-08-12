@@ -1,0 +1,28 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+  - repo: local
+    hooks:
+      - id: ruff-formatter
+        name: Ruff formatter
+        entry: poetry run ruff
+        language: system
+        types: [python]
+        args: [format]
+      - id: ruff-linter
+        name: Ruff linter
+        entry: poetry run ruff
+        language: system
+        types: [python]
+        args: [check, --fix]
+      - id: toml-sort
+        name: Sort TOML files
+        entry: poetry run toml-sort
+        language: system
+        types: [toml]
+        args: [--in-place]

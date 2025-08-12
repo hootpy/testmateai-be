@@ -1,0 +1,117 @@
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[project]
+name = "fastapi-postgres"
+version = "0.1.0"
+description = ""
+authors = [
+  {name = "Hootpy", email = "dev@hootpy.com"}
+]
+readme = "README.md"
+requires-python = ">=3.13"
+package-mode = false
+dependencies = [
+  "fastapi (>=0.116.1,<0.117.0)",
+  "uvicorn (>=0.35.0,<0.36.0)",
+  "pydantic[email] (>=2.11.7,<3.0.0)",
+  "pydantic-settings (>=2.10.1,<3.0.0)",
+  "sqlalchemy (>=2.0.42,<3.0.0)",
+  "toml (>=0.10.2,<0.11.0)",
+  "asyncpg (>=0.30.0,<0.31.0)",
+  "greenlet (>=3.2.3,<4.0.0)",
+  "alembic (>=1.16.4,<2.0.0)"
+]
+
+[tool.commitizen]
+name = "cz_customize"
+tag_format = "v$version"
+version_scheme = "pep440"
+version_provider = "poetry"
+update_changelog_on_bump = true
+major_version_zero = true
+
+[tool.commitizen.customize]
+message_template = "{{change_type}}({{issue_number}}): {{title}}\n\n{{description}}"
+example = "✨feat(#123): add user authentication\n\nImplemented JWT-based authentication system with login and logout functionality"
+schema = "<type>(<issue>): <title>\n\n<description>"
+schema_pattern = "^(✨feat|🐛fix|📚docs|📦refactor|🚀perf|🚨test|🛠build|⚙️ci|♻️chore|🗑revert)(\\(#\\d+\\))?: .+$"
+
+[[tool.commitizen.customize.questions]]
+type = "list"
+name = "change_type"
+message = "Select the type of change you are committing"
+choices = [
+  {value = "✨feat", name = "feat: A new feature"},
+  {value = "🐛fix", name = "fix: A bug fix"},
+  {value = "📚docs", name = "docs: Documentation only changes"},
+  {value = "📦refactor", name = "refactor: A code change that neither fixes a bug nor adds a feature"},
+  {value = "🚀perf", name = "perf: A code change that improves performance"},
+  {value = "🚨test", name = "test: Adding missing tests or correcting existing tests"},
+  {value = "🛠build", name = "build: Changes that affect the build system or external dependencies"},
+  {value = "⚙️ci", name = "ci: Changes to our CI configuration files and scripts"},
+  {value = "♻️chore", name = "chore: Other changes that don't modify src or test files"},
+  {value = "🗑revert", name = "revert: Reverts a previous commit"}
+]
+
+[[tool.commitizen.customize.questions]]
+type = "input"
+name = "title"
+message = "What is the commit title?"
+
+[[tool.commitizen.customize.questions]]
+type = "input"
+name = "description"
+message = "Provide a longer description of the change (optional):"
+
+[[tool.commitizen.customize.questions]]
+type = "input"
+name = "issue_number"
+message = "Enter the issue number (without #, optional):"
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^4.2.0"
+ruff = "^0.12.7"
+toml-sort = {version = ">=0.24.2", python = ">=3.13,<4.0"}
+commitizen = {version = ">=4.8.3", python = ">=3.13,<4.0"}
+
+[tool.ruff]
+exclude = [
+  ".bzr",
+  ".direnv",
+  ".eggs",
+  ".git",
+  ".git-rewrite",
+  ".hg",
+  ".ipynb_checkpoints",
+  ".mypy_cache",
+  ".nox",
+  ".pants.d",
+  ".pyenv",
+  ".pytest_cache",
+  ".pytype",
+  ".ruff_cache",
+  ".svn",
+  ".tox",
+  ".venv",
+  ".vscode",
+  "__pypackages__",
+  "_build",
+  "buck-out",
+  "build",
+  "dist",
+  "node_modules",
+  "site-packages",
+  "venv"
+]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+ignore = ["E203", "ISC003"]
+
+[tool.toml-sort]
+all = true
+preserve_comments = true
+sort_arrays = true

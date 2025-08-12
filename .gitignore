@@ -1,0 +1,10 @@
+.venv
+.idea/
+.DS_Store
+.env
+__pycache__/
+db.sqlite3
+postgres.tar
+.vscode
+.ruff_cache
+seed.sql
