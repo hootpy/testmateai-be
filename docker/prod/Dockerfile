@@ -4,7 +4,7 @@ RUN apk add --no-cache gcc musl-dev libffi-dev openssl-dev cargo
 
 RUN pip install "poetry==2.1.3"
 
-COPY pyproject.toml poetry.lock ./
+COPY ../../pyproject.toml ../../poetry.lock ./
 
 RUN poetry config virtualenvs.create false \
         && poetry install --no-interaction --no-ansi --no-root --without dev
