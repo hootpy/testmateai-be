@@ -38,5 +38,5 @@ RUN chown -R $USERNAME:$USERNAME /project
 USER $USERNAME
 
 # Run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--no-debug"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 #ENTRYPOINT exec tail -f /dev/null
