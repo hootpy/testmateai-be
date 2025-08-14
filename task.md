@@ -1,8 +1,13 @@
 # TASK INSTRUCTION
 
-- Context: user_api (app/api/user)
 
-- Instruction:
-    - Now we have the login function, create the dependency for secure endpoint.
-    - the get user endpoint now will not need the id, since the user can only see the detail of their info only.
-    - the same for update user name endpoint
+- Instruction: add new endpoint for first time login user:
+
+1.2 User Registration (First Time Login)
+POST /api/auth/register
+- Body: { email, name, targetScore, testDate }
+- Response: { message: "OTP sent successfully" }
+
+POST /api/auth/complete-registration
+- Body: { email, otp, name, targetScore, testDate }
+- Response: { token, user: { id, email, name, level, xp, targetScore, testDate } }

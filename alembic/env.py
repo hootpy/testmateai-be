@@ -8,6 +8,7 @@ from sqlalchemy.engine.base import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.core.config import SETTINGS
+from app.model.model import *  # noqa: F403
 from app.setup.database import Base
 
 # this is the Alembic Config object, which provides

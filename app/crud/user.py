@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Sequence, Optional
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio.session import AsyncSession
@@ -7,6 +7,7 @@ from sqlalchemy.sql.expression import select
 from app.common.exceptions.common import UniqueViolationField
 from app.model.model import User
 from app.schema.user import UserCreate
+from datetime import datetime, timezone, date
 
 
 class UserCrud:
@@ -36,7 +37,17 @@ class UserCrud:
         :param user: UserCreate: The user object to create.
         :return: User: The created user object.
         """
-        new_user = User(**user.model_dump())
+        now = datetime.now(timezone.utc)
+        new_user = User(
+            email=user.email,
+            name=user.name,
+            level=0,
+            xp=0,
+            target_score=None,
+            test_date=None,
+            created_at=now,
+            updated_at=now,
+        )
         db.add(new_user)
         try:
             await db.commit()
@@ -58,6 +69,11 @@ class UserCrud:
         return query.scalar_one_or_none()
 
     @classmethod
+    async def get_user_by_email(cls, db: AsyncSession, email: str) -> Optional[User]:
+        query = await db.execute(select(User).where(User.email == email))
+        return query.scalar_one_or_none()
+
+    @classmethod
     async def update_user_name(cls, db: AsyncSession, user_id: int, new_name: str) -> User | None:
         """
         Update an existing user's name.
@@ -72,17 +88,38 @@ class UserCrud:
         if user is None:
             return None
         user.name = new_name
+        user.updated_at = datetime.now(timezone.utc)
         await db.commit()
         await db.refresh(user)
         return user
 
     @classmethod
     async def get_or_create_user_by_email(cls, db: AsyncSession, email: str) -> User:
-        query = await db.execute(select(User).where(User.email == email))
-        user = query.scalar_one_or_none()
+        user = await cls.get_user_by_email(db, email)
         if user is not None:
             return user
         # Use local-part as fallback name
         local_part = email.split("@", 1)[0]
         create_payload = UserCreate(name=local_part, email=email)
         return await cls.create_user(db, create_payload)
+
+    @classmethod
+    async def update_user_profile(
+        cls,
+        db: AsyncSession,
+        user_id: int,
+        name: str,
+        target_score: Optional[float],
+        test_date: Optional[date],
+    ) -> Optional[User]:
+        query = await db.execute(select(User).where(User.id == user_id))
+        user = query.scalar_one_or_none()
+        if user is None:
+            return None
+        user.name = name
+        user.target_score = target_score
+        user.test_date = test_date
+        user.updated_at = datetime.now(timezone.utc)
+        await db.commit()
+        await db.refresh(user)
+        return user

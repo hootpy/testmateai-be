@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select
 
 from app.core.config import SETTINGS
-from app.model.model import Otp, User
+from app.model.model import OtpCode, User
 from app.crud.user import UserCrud
 
 
@@ -17,33 +17,21 @@ class AuthCrud:
         return datetime.now(timezone.utc)
 
     @classmethod
-    async def issue_otp(cls, db: AsyncSession, email: str) -> Otp:
-        user: User = await UserCrud.get_or_create_user_by_email(db, email)
+    async def issue_otp(cls, db: AsyncSession, email: str) -> OtpCode:
+        # Ensure user exists (get_or_create strategy)
+        await UserCrud.get_or_create_user_by_email(db, email)
 
-        # Rate limit based on last_sent_at
-        query = await db.execute(select(Otp).where(Otp.user_id == user.id).order_by(Otp.created_at.desc()))
-        existing: Optional[Otp] = query.scalar_one_or_none()
+        # Rate limit based on latest OTP for this email
+        query = await db.execute(select(OtpCode).where(OtpCode.email == email).order_by(OtpCode.created_at.desc()))
+        existing: Optional[OtpCode] = query.scalar_one_or_none()
         now = cls._now()
-        if (
-            existing
-            and existing.last_sent_at
-            and (now - existing.last_sent_at).total_seconds() < SETTINGS.OTP_RATE_LIMIT_SECONDS
-        ):
+        if existing and (now - existing.created_at).total_seconds() < SETTINGS.OTP_RATE_LIMIT_SECONDS:
             return existing
 
-        # Create or update OTP
+        # Create new OTP record
         code = cls._generate_otp_code()
         expires_at = now + timedelta(seconds=SETTINGS.OTP_TTL_SECONDS)
-        if existing:
-            existing.code = code
-            existing.expires_at = expires_at
-            existing.last_sent_at = now
-            db.add(existing)
-            await db.commit()
-            await db.refresh(existing)
-            return existing
-
-        otp = Otp(user_id=user.id, code=code, expires_at=expires_at, created_at=now, last_sent_at=now)
+        otp = OtpCode(email=email, otp=code, expires_at=expires_at, created_at=now)
         db.add(otp)
         await db.commit()
         await db.refresh(otp)
@@ -58,17 +46,15 @@ class AuthCrud:
 
     @classmethod
     async def verify_otp(cls, db: AsyncSession, email: str, code: str) -> Optional[User]:
-        query_user = await db.execute(select(User).where(User.email == email))
-        user: Optional[User] = query_user.scalar_one_or_none()
-        if user is None:
-            return None
-        query = await db.execute(select(Otp).where(Otp.user_id == user.id).order_by(Otp.created_at.desc()))
-        otp: Optional[Otp] = query.scalar_one_or_none()
+        query = await db.execute(select(OtpCode).where(OtpCode.email == email).order_by(OtpCode.created_at.desc()))
+        otp: Optional[OtpCode] = query.scalar_one_or_none()
         if otp is None:
             return None
         now = cls._now()
         if otp.expires_at <= now:
             return None
-        if otp.code != code:
+        if otp.otp != code:
             return None
+        # Ensure user exists and return it
+        user = await UserCrud.get_or_create_user_by_email(db, email)
         return user

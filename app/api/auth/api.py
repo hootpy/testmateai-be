@@ -7,9 +7,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import SETTINGS
 from app.core.depends.get_session import get_session
-from app.schema.auth import LoginRequest, VerifyOtpRequest, TokenResponse
+from app.schema.auth import (
+    LoginRequest,
+    VerifyOtpRequest,
+    TokenResponse,
+    RegisterRequest,
+    CompleteRegistrationRequest,
+    RegistrationCompleteResponse,
+    AuthUser,
+)
 from app.common.utils.email import send_email
 from app.crud.auth import AuthCrud
+from app.crud.user import UserCrud
 
 router = APIRouter(
     prefix="/auth",
@@ -46,3 +55,36 @@ async def verify_otp(payload: VerifyOtpRequest, db: Annotated[AsyncSession, Depe
 @router.get("/logout")
 async def logout():
     return {"ok": True}
+
+
+@router.post("/register")
+async def register(payload: RegisterRequest, db: Annotated[AsyncSession, Depends(get_session)]):
+    otp = await AuthCrud.issue_otp(db, payload.email)
+    await send_email(payload.email, subject="Your login code", body=f"Your OTP is {otp.otp}")
+    return {"message": "OTP sent successfully"}
+
+
+@router.post("/complete-registration", response_model=RegistrationCompleteResponse)
+async def complete_registration(
+    payload: CompleteRegistrationRequest, db: Annotated[AsyncSession, Depends(get_session)]
+):
+    user = await AuthCrud.verify_otp(db, payload.email, payload.otp)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired OTP")
+
+    # Update profile with provided info
+    updated = await UserCrud.update_user_profile(
+        db,
+        user_id=user.id,
+        name=payload.name,
+        target_score=payload.targetScore,
+        test_date=payload.testDate,
+    )
+    assert updated is not None
+
+    # Issue JWT
+    now = datetime.now(timezone.utc)
+    exp = now + timedelta(minutes=SETTINGS.JWT_EXPIRE_MINUTES)
+    claims = {"sub": str(updated.id), "email": updated.email, "iat": int(now.timestamp()), "exp": int(exp.timestamp())}
+    token = jwt.encode(claims, SETTINGS.JWT_SECRET, algorithm=SETTINGS.JWT_ALGORITHM)
+    return RegistrationCompleteResponse(token=token, user=AuthUser.model_validate(updated))

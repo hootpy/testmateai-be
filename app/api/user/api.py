@@ -5,7 +5,7 @@ from app.core.depends.get_session import get_session
 from app.core.depends.get_current_user import get_current_user
 from app.crud.user import UserCrud
 from app.model.model import User
-from app.schema.user import UserGet, UserUpdateName
+from app.schema.user import UserDetail, UserUpdate
 
 router = APIRouter(
     prefix="/user",
@@ -13,7 +13,7 @@ router = APIRouter(
 )
 
 
-@router.get("/me", response_model=UserGet)
+@router.get("/me", response_model=UserDetail)
 async def get_user_detail(current_user: User = Depends(get_current_user)) -> User:
     """
     Get current user's detail
@@ -21,14 +21,19 @@ async def get_user_detail(current_user: User = Depends(get_current_user)) -> Use
     return current_user
 
 
-@router.patch("/me", response_model=UserGet)
-async def change_user_name(
-    payload: UserUpdateName, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_session)
+@router.patch("/me", response_model=UserDetail)
+async def update_user_detail(
+    payload: UserUpdate, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_session)
 ) -> User:
     """
-    Update current user's name
+    Update current user's profile
     """
-    user = await UserCrud.update_user_name(db, current_user.id, payload.name)
+    name = payload.name if payload.name is not None else current_user.name
+    target_score = payload.targetScore if payload.targetScore is not None else current_user.target_score
+    test_date = payload.testDate if payload.testDate is not None else current_user.test_date
+    user = await UserCrud.update_user_profile(
+        db, current_user.id, name=name, target_score=target_score, test_date=test_date
+    )
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return user
