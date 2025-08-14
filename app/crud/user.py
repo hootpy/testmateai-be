@@ -44,3 +44,45 @@ class UserCrud:
             raise UniqueViolationField from e
         await db.refresh(new_user)
         return new_user
+
+    @classmethod
+    async def get_user_by_id(cls, db: AsyncSession, user_id: int) -> User | None:
+        """
+        Get a single user by id.
+
+        :param db: AsyncSession: Async SQLAlchemy session.
+        :param user_id: int: The user id to lookup.
+        :return: User | None: The user if found, otherwise None.
+        """
+        query = await db.execute(select(User).where(User.id == user_id))
+        return query.scalar_one_or_none()
+
+    @classmethod
+    async def update_user_name(cls, db: AsyncSession, user_id: int, new_name: str) -> User | None:
+        """
+        Update an existing user's name.
+
+        :param db: AsyncSession: Async SQLAlchemy session.
+        :param user_id: int: The user id to update.
+        :param new_name: str: The new name to set.
+        :return: User | None: The updated user if found, otherwise None.
+        """
+        query = await db.execute(select(User).where(User.id == user_id))
+        user = query.scalar_one_or_none()
+        if user is None:
+            return None
+        user.name = new_name
+        await db.commit()
+        await db.refresh(user)
+        return user
+
+    @classmethod
+    async def get_or_create_user_by_email(cls, db: AsyncSession, email: str) -> User:
+        query = await db.execute(select(User).where(User.email == email))
+        user = query.scalar_one_or_none()
+        if user is not None:
+            return user
+        # Use local-part as fallback name
+        local_part = email.split("@", 1)[0]
+        create_payload = UserCreate(name=local_part, email=email)
+        return await cls.create_user(db, create_payload)

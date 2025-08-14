@@ -4,7 +4,7 @@ from typing import AsyncGenerator
 from app.common.utils.version import get_project_version
 from app.core.config import SETTINGS
 from fastapi import FastAPI
-from app.api.routes import router as api_router
+from app.api.route import router as api_router
 
 from app.setup.database import sessionmanager
 from app.setup.middleware import middlewares

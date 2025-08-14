@@ -16,3 +16,7 @@ class UserCreate(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class UserUpdateName(BaseModel):
+    name: str

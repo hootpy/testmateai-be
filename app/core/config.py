@@ -17,6 +17,24 @@ class Settings(BaseSettings):
     ALLOW_METHODS: list[str]
     ALLOW_HEADERS: list[str]
 
+    # SMTP / Email settings (defaults configured for Gmail)
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str | None = None
+    SMTP_PASSWORD: str | None = None
+    SMTP_USE_TLS: bool = True
+    SMTP_FROM_EMAIL: str | None = None
+    SMTP_FROM_NAME: str = "No-Reply"
+
+    # OTP/Auth settings
+    OTP_LENGTH: int = 6
+    OTP_TTL_SECONDS: int = 120
+    OTP_RATE_LIMIT_SECONDS: int = 30
+
+    JWT_SECRET: str = "changeme"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRE_MINUTES: int = 60 * 24 * 7
+
     class Config:
         case_sensitive = True
         env_file = ".env"
