@@ -45,8 +45,12 @@ class UserUpdate(BaseModel):
     @classmethod
     def validate_target_score(cls, value: float | None) -> float | None:
         if value is None:
-            return value
+            return None
         doubled = value * 2
         if abs(doubled - round(doubled)) > 1e-9:
             raise ValueError("targetScore must be in 0.5 increments (e.g., 7.0, 7.5)")
         return value
+
+
+class UserUpdateResponse(BaseModel):
+    user: UserDetail

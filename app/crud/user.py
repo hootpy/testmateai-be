@@ -123,3 +123,20 @@ class UserCrud:
         await db.commit()
         await db.refresh(user)
         return user
+
+    @classmethod
+    async def delete_user_account(cls, db: AsyncSession, user_id: int) -> bool:
+        """
+        Delete a user account by ID.
+
+        :param db: AsyncSession: Async SQLAlchemy session.
+        :param user_id: int: The user id to delete.
+        :return: bool: True if user was deleted, False if user was not found.
+        """
+        query = await db.execute(select(User).where(User.id == user_id))
+        user = query.scalar_one_or_none()
+        if user is None:
+            return False
+        await db.delete(user)
+        await db.commit()
+        return True
