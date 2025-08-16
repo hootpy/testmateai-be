@@ -44,3 +44,30 @@ class WritingFeedbackResponse(BaseModel):
     grammatical_range: str
     suggestions: List[str]
     improved_version: str
+
+
+class StudyPlanRequest(BaseModel):
+    currentScore: float
+    targetScore: float
+    testDate: date
+    availableTime: int  # Daily available study time in minutes
+
+
+class WeeklyTask(BaseModel):
+    week: int
+    focus: str
+    tasks: List[str]
+
+
+class FocusArea(BaseModel):
+    skill: str
+    reason: str
+    priority: int
+
+
+class StudyPlanResponse(BaseModel):
+    summary: str
+    weeks: int
+    recommendations: List[str]
+    weekly_schedule: List[WeeklyTask]
+    focus_areas: List[FocusArea]

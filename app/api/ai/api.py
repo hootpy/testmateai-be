@@ -7,8 +7,12 @@ from app.core.depends.get_current_user import get_current_user
 from app.core.depends.get_session import get_session
 from app.model.model import User
 from app.schema.ai import (
+    FocusArea,
     SpeakingFeedbackRequest,
     SpeakingFeedbackResponse,
+    StudyPlanRequest,
+    StudyPlanResponse,
+    WeeklyTask,
     WritingFeedbackRequest,
     WritingFeedbackResponse,
 )
@@ -120,6 +124,167 @@ async def get_writing_feedback(
         "we must acknowledge and address its downsides. A balanced approach to technological integration, "
         "coupled with thoughtful regulation and mindful usage, would enable us to maximize benefits while "
         "mitigating negative consequences.",
+    )
+
+    return mock_response
+
+
+@router.post("/study-plan", response_model=StudyPlanResponse)
+async def generate_study_plan(
+    payload: StudyPlanRequest,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> StudyPlanResponse:
+    """
+    Generate a personalized study plan based on current score, target score, test date, and available time
+    """
+    # Calculate number of weeks until test date
+    today = datetime.now().date()
+    weeks_until_test = max(1, (payload.testDate - today).days // 7)
+
+    # Here you would integrate with your AI service to generate a customized study plan
+    # For now, we'll return mock data that scales based on the input parameters
+
+    # Dynamically adjust study intensity based on score gap and available time
+    score_gap = payload.targetScore - payload.currentScore
+    intensity_factor = min(1.0, (score_gap / 2.0) * (payload.availableTime / 120))
+
+    # Generate focus areas based on the score gap
+    focus_areas = []
+
+    if score_gap >= 0.5:
+        # Prioritize different skills based on the gap size
+        if score_gap >= 2.0:
+            # For large gaps, focus on all areas with priorities
+            focus_areas = [
+                FocusArea(
+                    skill="Listening",
+                    reason="Your current performance indicates significant room for improvement in understanding different accents and complex information.",
+                    priority=1,
+                ),
+                FocusArea(
+                    skill="Reading",
+                    reason="You need to build stronger skimming and scanning techniques to improve comprehension speed and accuracy.",
+                    priority=2,
+                ),
+                FocusArea(
+                    skill="Writing",
+                    reason="Focus on essay structure and coherence to improve your written responses.",
+                    priority=3,
+                ),
+                FocusArea(
+                    skill="Speaking",
+                    reason="Work on fluency and pronunciation to express ideas more clearly.",
+                    priority=4,
+                ),
+            ]
+        elif score_gap >= 1.0:
+            # For medium gaps, focus on key areas
+            focus_areas = [
+                FocusArea(
+                    skill="Writing",
+                    reason="Your writing organization and vocabulary range need improvement to reach your target score.",
+                    priority=1,
+                ),
+                FocusArea(
+                    skill="Speaking",
+                    reason="Practice speaking with more complex grammatical structures and better pronunciation.",
+                    priority=2,
+                ),
+                FocusArea(
+                    skill="Reading",
+                    reason="Enhance your ability to identify main ideas and supporting details.",
+                    priority=3,
+                ),
+            ]
+        else:
+            # For small gaps, focus on refinement
+            focus_areas = [
+                FocusArea(
+                    skill="Speaking",
+                    reason="Refine your speaking to include more academic vocabulary and complex structures.",
+                    priority=1,
+                ),
+                FocusArea(
+                    skill="Writing",
+                    reason="Focus on advanced writing techniques to boost your score to the target level.",
+                    priority=2,
+                ),
+            ]
+
+    # Generate weekly schedule
+    weekly_schedule = []
+
+    for week in range(1, min(weeks_until_test + 1, 13)):  # Cap at 12 weeks
+        if week <= 4:
+            # First month: focus on fundamentals
+            focus = "Building core skills"
+            tasks = [
+                f"Complete {int(30 * intensity_factor)} reading practice questions",
+                f"Listen to {int(5 * intensity_factor)} academic lectures and take notes",
+                f"Write {int(2 * intensity_factor)} practice essays and review them",
+                f"Practice speaking for {int(20 * intensity_factor)} minutes daily with recorded responses",
+            ]
+        elif week <= 8:
+            # Second month: practice and strategy
+            focus = "Test strategies and practice"
+            tasks = [
+                f"Take {int(2 * intensity_factor)} full-length practice tests",
+                "Review mistakes and identify pattern errors",
+                "Practice time management during reading and listening sections",
+                "Work on specific vocabulary for your weak areas",
+            ]
+        else:
+            # Final weeks: refinement and full tests
+            focus = "Refinement and full test preparation"
+            tasks = [
+                "Complete one full practice test per week",
+                "Focus on your highest priority skill areas",
+                "Review all vocabulary and grammar notes",
+                "Practice stress management and test day strategies",
+            ]
+
+        weekly_schedule.append(WeeklyTask(week=week, focus=focus, tasks=tasks))
+
+    # Generate general recommendations
+    recommendations = [
+        f"Study at least {payload.availableTime} minutes every day",
+        "Focus on your weakest skills first",
+        "Track your progress with regular practice tests",
+        "Use official test preparation materials",
+        "Consider joining a study group or finding a study partner",
+    ]
+
+    if payload.availableTime < 60:
+        recommendations.append("Try to increase your daily study time to at least 60 minutes for better results")
+
+    if weeks_until_test < 4:
+        recommendations.append(
+            "Your test date is very soon. Consider intensive preparation or rescheduling if possible"
+        )
+
+    # Create summary based on all factors
+    summary = f"This {weeks_until_test}-week study plan will help you improve from band {payload.currentScore} to your target of {payload.targetScore}. "
+
+    if score_gap > 2.0:
+        summary += "The gap between your current and target scores is significant, requiring dedicated daily study. "
+    elif score_gap > 1.0:
+        summary += "You'll need consistent effort to bridge the gap to your target score. "
+    else:
+        summary += "With focused practice on key areas, your target score is achievable. "
+
+    if weeks_until_test < 8:
+        summary += f"With {weeks_until_test} weeks until your test, you should begin your preparation immediately."
+    else:
+        summary += f"You have {weeks_until_test} weeks to prepare, which gives you sufficient time if you follow this plan consistently."
+
+    # Construct and return the response
+    mock_response = StudyPlanResponse(
+        summary=summary,
+        weeks=min(weeks_until_test, 12),  # Cap at 12 weeks in the plan
+        recommendations=recommendations,
+        weekly_schedule=weekly_schedule,
+        focus_areas=focus_areas,
     )
 
     return mock_response
