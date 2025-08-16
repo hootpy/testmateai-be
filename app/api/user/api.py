@@ -1,11 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
 from app.core.depends.get_current_user import get_current_user
 from app.core.depends.get_session import get_session
 from app.crud.user import UserCrud
+from app.crud.user_progress import UserProgressCrud
 from app.model.model import User
 from app.schema.user import UserDetail, UserProfileResponse, UserUpdate
+from app.schema.user_progress import UserAchievementsResponse, UserActivityResponse, UserProgressResponse, UserSkills
 
 router = APIRouter(
     prefix="/user",
@@ -81,3 +83,56 @@ async def delete_user_account(db: AsyncSession = Depends(get_session), current_u
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to delete account")
 
     return {"message": "Account deleted successfully"}
+
+
+@router.get("/progress", response_model=UserProgressResponse)
+async def get_user_progress(db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user)):
+    """
+    Get current user's progress, skills, achievements, and recent activity
+    """
+    # Get user skills (speaking, listening, reading, writing)
+    skills_data = await UserProgressCrud.get_user_skills(db, current_user.id)
+    skills = UserSkills(**skills_data)
+
+    # Get user's total XP
+    total_xp = await UserProgressCrud.get_user_total_xp(db, current_user.id)
+
+    # Get user's achievements
+    achievements = await UserProgressCrud.get_user_achievements(db, current_user.id)
+
+    # Get user's recent activity (limit to 5 most recent activities)
+    recent_activity = await UserProgressCrud.get_user_activities(db, current_user.id, limit=5)
+
+    return UserProgressResponse(
+        level=current_user.level,
+        xp=current_user.xp,
+        total_xp=total_xp,
+        skills=skills,
+        achievements=achievements,
+        recent_activity=recent_activity,
+    )
+
+
+@router.get("/achievements", response_model=UserAchievementsResponse)
+async def get_user_achievements(
+    db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user)
+):
+    """
+    Get all achievements with their earned status for the current user
+    """
+    achievements = await UserProgressCrud.get_all_achievements(db, current_user.id)
+    return UserAchievementsResponse(achievements=achievements)
+
+
+@router.get("/activity", response_model=UserActivityResponse)
+async def get_user_activity(
+    limit: int = Query(10, gt=0, le=100),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get current user's activity history with pagination
+    """
+    activities = await UserProgressCrud.get_user_activities(db, current_user.id, limit=limit, offset=offset)
+    return UserActivityResponse(activities=activities)
