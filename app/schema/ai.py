@@ -1,4 +1,5 @@
-from typing import List, Optional
+from datetime import date
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel
 
@@ -26,3 +27,20 @@ class SpeakingFeedbackResponse(BaseModel):
     grammar_feedback: str
     vocabulary_feedback: str
     coherence_feedback: str
+
+
+class WritingFeedbackRequest(BaseModel):
+    prompt: str
+    answer: str
+    taskType: Literal["essay", "letter", "report"]
+
+
+class WritingFeedbackResponse(BaseModel):
+    band: float
+    comment: str
+    task_achievement: str
+    coherence_cohesion: str
+    lexical_resource: str
+    grammatical_range: str
+    suggestions: List[str]
+    improved_version: str
