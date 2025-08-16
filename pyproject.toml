@@ -105,13 +105,13 @@ exclude = [
   "site-packages",
   "venv"
 ]
-select = [
-  "I"
-]
 line-length = 120
 target-version = "py313"
 
 [tool.ruff.lint]
+select = [
+  "I"
+]
 ignore = ["E203", "ISC003"]
 
 [tool.toml-sort]
