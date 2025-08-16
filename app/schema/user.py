@@ -1,4 +1,5 @@
 from datetime import date
+
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from pydantic.config import ConfigDict
 
@@ -32,6 +33,7 @@ class UserDetail(BaseModel):
     xp: int
     targetScore: float | None = Field(default=None, validation_alias="target_score", serialization_alias="targetScore")
     testDate: date | None = Field(default=None, validation_alias="test_date", serialization_alias="testDate")
+    preferences: dict | None = None
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
@@ -40,6 +42,7 @@ class UserUpdate(BaseModel):
     name: str | None = None
     targetScore: float | None = None
     testDate: date | None = None
+    preferences: dict | None = None
 
     @field_validator("targetScore")
     @classmethod
@@ -54,3 +57,11 @@ class UserUpdate(BaseModel):
 
 class UserUpdateResponse(BaseModel):
     user: UserDetail
+
+
+class UserProfileResponse(BaseModel):
+    user: UserDetail
+
+    class Config:
+        from_attributes = True
+        json_encoders = {date: lambda v: v.isoformat() if v else None}

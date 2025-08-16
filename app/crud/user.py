@@ -1,4 +1,5 @@
-from typing import Sequence, Optional
+from datetime import date, datetime, timezone
+from typing import Optional, Sequence
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio.session import AsyncSession
@@ -7,7 +8,6 @@ from sqlalchemy.sql.expression import select
 from app.common.exceptions.common import UniqueViolationField
 from app.model.model import User
 from app.schema.user import UserCreate
-from datetime import datetime, timezone, date
 
 
 class UserCrud:
@@ -111,6 +111,7 @@ class UserCrud:
         name: str,
         target_score: Optional[float],
         test_date: Optional[date],
+        preferences: Optional[dict] = None,
     ) -> Optional[User]:
         query = await db.execute(select(User).where(User.id == user_id))
         user = query.scalar_one_or_none()
@@ -119,6 +120,8 @@ class UserCrud:
         user.name = name
         user.target_score = target_score
         user.test_date = test_date
+        if preferences is not None:
+            user.preferences = preferences
         user.updated_at = datetime.now(timezone.utc)
         await db.commit()
         await db.refresh(user)

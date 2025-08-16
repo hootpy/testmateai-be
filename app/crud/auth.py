@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select
 
 from app.core.config import SETTINGS
-from app.model.model import OtpCode, User
 from app.crud.user import UserCrud
+from app.model.model import OtpCode, User
 
 
 class AuthCrud:
@@ -46,7 +46,9 @@ class AuthCrud:
 
     @classmethod
     async def verify_otp(cls, db: AsyncSession, email: str, code: str) -> Optional[User]:
-        query = await db.execute(select(OtpCode).where(OtpCode.email == email).order_by(OtpCode.created_at.desc()))
+        query = await db.execute(
+            select(OtpCode).where(OtpCode.email == email).order_by(OtpCode.created_at.desc()).limit(1)
+        )
         otp: Optional[OtpCode] = query.scalar_one_or_none()
         if otp is None:
             return None
