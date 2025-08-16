@@ -105,6 +105,9 @@ exclude = [
   "site-packages",
   "venv"
 ]
+select = [
+  "I"
+]
 line-length = 120
 target-version = "py313"
 
