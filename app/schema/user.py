@@ -51,10 +51,10 @@ class UserDetail(BaseModel):
     name: str
     level: int
     xp: int
-    currentScore: float
+    currentScore: float = 0.0
     targetScore: float | None = Field(default=None, validation_alias="target_score", serialization_alias="targetScore")
     testDate: date | None = Field(default=None, validation_alias="test_date", serialization_alias="testDate")
-    hasPreviousTest: bool
+    hasPreviousTest: bool = False
     lastTestScore: float | None = None
     studyPlan: Optional[StudyPlan] = None
 
