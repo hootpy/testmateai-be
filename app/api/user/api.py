@@ -44,7 +44,6 @@ async def update_user_profile(
         name=payload.name,
         target_score=payload.targetScore,
         test_date=payload.testDate,
-        preferences=payload.preferences,
     )
 
     if updated is None:
@@ -63,10 +62,9 @@ async def update_user_detail(
     name = payload.name if payload.name is not None else current_user.name
     target_score = payload.targetScore if payload.targetScore is not None else current_user.target_score
     test_date = payload.testDate if payload.testDate is not None else current_user.test_date
-    preferences = payload.preferences if payload.preferences is not None else current_user.preferences
 
     user = await UserCrud.update_user_profile(
-        db, user_id=current_user.id, name=name, target_score=target_score, test_date=test_date, preferences=preferences
+        db, user_id=current_user.id, name=name, target_score=target_score, test_date=test_date
     )
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")

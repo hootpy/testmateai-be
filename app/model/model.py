@@ -28,7 +28,6 @@ class User(Base):
     xp: Mapped[int] = Column(Integer, nullable=False, default=0)
     target_score: Mapped[Optional[float]] = Column(Float, nullable=True)
     test_date: Mapped[Optional[Date]] = Column(Date, nullable=True)
-    preferences: Mapped[Optional[dict]] = Column(JSON, nullable=True)
     created_at: Mapped[datetime] = Column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = Column(DateTime(timezone=True), nullable=False)
 

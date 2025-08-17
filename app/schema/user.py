@@ -1,4 +1,5 @@
 from datetime import date
+from typing import List, Optional
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from pydantic.config import ConfigDict
@@ -25,15 +26,37 @@ class UserUpdateName(BaseModel):
     name: str
 
 
+class StudyPlanFocusArea(BaseModel):
+    skill: str
+    reason: str
+
+
+class StudyPlanWeeklySchedule(BaseModel):
+    week: int
+    focus: str
+    tasks: List[str]
+
+
+class StudyPlan(BaseModel):
+    summary: str
+    weeks: int
+    recommendations: List[str]
+    focus_areas: List[StudyPlanFocusArea]
+    weekly_schedule: List[StudyPlanWeeklySchedule]
+
+
 class UserDetail(BaseModel):
     id: int
     email: EmailStr
     name: str
     level: int
     xp: int
+    currentScore: float
     targetScore: float | None = Field(default=None, validation_alias="target_score", serialization_alias="targetScore")
     testDate: date | None = Field(default=None, validation_alias="test_date", serialization_alias="testDate")
-    preferences: dict | None = None
+    hasPreviousTest: bool
+    lastTestScore: float | None = None
+    studyPlan: Optional[StudyPlan] = None
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
@@ -42,7 +65,6 @@ class UserUpdate(BaseModel):
     name: str | None = None
     targetScore: float | None = None
     testDate: date | None = None
-    preferences: dict | None = None
 
     @field_validator("targetScore")
     @classmethod
