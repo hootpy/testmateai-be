@@ -5,23 +5,23 @@ import jwt  # type: ignore[import-not-found]
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.common.utils.email import send_email
 from app.core.config import SETTINGS
 from app.core.depends.get_current_user import get_current_user
 from app.core.depends.get_session import get_session
-from app.model.model import User
-from app.schema.auth import (
-    LoginRequest,
-    VerifyOtpRequest,
-    TokenResponse,
-    RegisterRequest,
-    CompleteRegistrationRequest,
-    RegistrationCompleteResponse,
-    AuthUser,
-)
-from app.common.utils.email import send_email
 from app.crud.auth import AuthCrud
 from app.crud.user import UserCrud
-from app.schema.user import UserUpdateResponse, UserUpdate
+from app.model.model import User
+from app.schema.auth import (
+    AuthUser,
+    CompleteRegistrationRequest,
+    LoginRequest,
+    RegisterRequest,
+    RegistrationCompleteResponse,
+    TokenResponse,
+    VerifyOtpRequest,
+)
+from app.schema.user import UserUpdate, UserUpdateResponse
 
 router = APIRouter(
     prefix="/auth",
@@ -33,7 +33,7 @@ router = APIRouter(
 async def login(payload: LoginRequest, db: Annotated[AsyncSession, Depends(get_session)]):
     otp = await AuthCrud.issue_otp(db, payload.email)
     # Email: "Your OTP is 123456"
-    await send_email(payload.email, subject="Your login code", body=f"Your OTP is {otp.code}")
+    await send_email(payload.email, subject="Your login code", body=f"Your OTP is {otp.otp}")
     return {"ok": True}
 
 
