@@ -88,3 +88,69 @@ class UserCrud:
         await db.commit()
         await db.refresh(user)
         return user
+
+    @classmethod
+    async def get_user_progress(cls, db: AsyncSession, user_id: uuid.UUID) -> Optional[User]:
+        """
+        Get user with all progress-related fields for the progress endpoint.
+        This method ensures we get fresh data from the database.
+        """
+        result = await db.execute(select(User).where(User.id == user_id).limit(1))
+        return result.scalar_one_or_none()
+
+    @classmethod
+    async def add_xp_to_user(cls, db: AsyncSession, user_id: uuid.UUID, xp_amount: int) -> Optional[User]:
+        """
+        Add XP to user and handle level progression.
+        Returns the updated user or None if user not found.
+        """
+        result = await db.execute(select(User).where(User.id == user_id).limit(1))
+        user = result.scalar_one_or_none()
+        if user is None:
+            return None
+
+        # Store previous values for response
+        previous_xp = user.xp
+        previous_level = user.level
+
+        # Add XP
+        user.xp += xp_amount
+
+        # Calculate new level based on XP
+        new_level = cls._calculate_level_from_xp(user.xp)
+        user.level = new_level
+
+        # Update timestamp
+        user.updated_at = datetime.now(timezone.utc)
+
+        await db.commit()
+        await db.refresh(user)
+        return user
+
+    @staticmethod
+    def _calculate_level_from_xp(xp: int) -> int:
+        """
+        Calculate level based on total XP.
+
+        Level progression formula:
+        - Level 1: 0-99 XP
+        - Level 2: 100-299 XP (200 XP needed)
+        - Level 3: 300-599 XP (300 XP needed)
+        - Level 4: 600-999 XP (400 XP needed)
+        - And so on...
+        """
+        if xp < 100:
+            return 1
+
+        # For level 2 and above, calculate based on cumulative XP needed
+        level = 1
+        cumulative_xp_needed = 0
+
+        while True:
+            level += 1
+            cumulative_xp_needed += level * 100
+
+            if xp < cumulative_xp_needed:
+                return level - 1
+
+        return 1  # Fallback
