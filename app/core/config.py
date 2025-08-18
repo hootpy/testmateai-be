@@ -35,6 +35,12 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 60 * 24 * 7
 
+    # LLM / AI configuration
+    # Default provider is a local fake provider that echoes the prompt
+    LLM_PROVIDER: str = "fake"
+    OPENAI_API_KEY: str | None = None
+    OPENAI_MODEL: str = "gpt-4o-mini"
+
     class Config:
         case_sensitive = True
         env_file = ".env"
