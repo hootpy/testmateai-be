@@ -57,19 +57,26 @@ class PracticeCrud:
         return passages
 
     @classmethod
-    async def get_speaking_questions(cls, db: AsyncSession, limit: int = 10) -> List[PracticeQuestion]:
+    async def get_speaking_questions(
+        cls, db: AsyncSession, limit: int = 10, question_type: Optional[str] = None
+    ) -> List[PracticeQuestion]:
         """
         Get speaking practice questions.
         Returns questions ordered by creation date (newest first).
         """
         # Get questions for speaking skill (no passage_id since speaking questions are standalone)
-        result = await db.execute(
+        query = (
             select(PracticeQuestion)
             .where(PracticeQuestion.skill == "speaking")
             .where(PracticeQuestion.passage_id.is_(None))  # Speaking questions don't have passages
-            .order_by(PracticeQuestion.created_at.desc())
-            .limit(limit)
         )
+
+        if question_type:
+            query = query.where(PracticeQuestion.question_type == question_type)
+
+        query = query.order_by(PracticeQuestion.created_at.desc()).limit(limit)
+
+        result = await db.execute(query)
         return result.scalars().all()
 
     @classmethod
@@ -89,17 +96,24 @@ class PracticeCrud:
         return result.scalars().all()
 
     @classmethod
-    async def get_writing_prompts(cls, db: AsyncSession, limit: int = 10) -> List[PracticeQuestion]:
+    async def get_writing_prompts(
+        cls, db: AsyncSession, limit: int = 10, question_type: Optional[str] = None
+    ) -> List[PracticeQuestion]:
         """
         Get writing practice prompts.
         Returns prompts ordered by creation date (newest first).
         """
         # Get questions for writing skill (no passage_id since writing prompts are standalone)
-        result = await db.execute(
+        query = (
             select(PracticeQuestion)
             .where(PracticeQuestion.skill == "writing")
             .where(PracticeQuestion.passage_id.is_(None))  # Writing prompts don't have passages
-            .order_by(PracticeQuestion.created_at.desc())
-            .limit(limit)
         )
+
+        if question_type:
+            query = query.where(PracticeQuestion.question_type == question_type)
+
+        query = query.order_by(PracticeQuestion.created_at.desc()).limit(limit)
+
+        result = await db.execute(query)
         return result.scalars().all()

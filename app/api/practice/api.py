@@ -56,12 +56,18 @@ async def get_reading_practice(
 async def get_speaking_practice(
     db: Annotated[AsyncSession, Depends(get_session)],
     limit: Annotated[int, Query(ge=1, le=50)] = 10,
+    question_type: Annotated[
+        str | None,
+        Query(
+            description="Optional question type filter, e.g., 'part1', 'part2', 'part3'",
+        ),
+    ] = None,
 ):
     """
     Get speaking practice questions
     """
     # Get speaking questions
-    questions = await PracticeCrud.get_speaking_questions(db, limit=limit)
+    questions = await PracticeCrud.get_speaking_questions(db, limit=limit, question_type=question_type)
 
     # Convert to response format
     question_responses = [convert_speaking_question_to_response(question) for question in questions]
@@ -73,12 +79,18 @@ async def get_speaking_practice(
 async def get_writing_practice(
     db: Annotated[AsyncSession, Depends(get_session)],
     limit: Annotated[int, Query(ge=1, le=50)] = 10,
+    question_type: Annotated[
+        str | None,
+        Query(
+            description="Optional question type filter, e.g., 'task1', 'task2', 'task3'",
+        ),
+    ] = None,
 ):
     """
     Get writing practice questions
     """
     # Get writing prompts
-    prompts = await PracticeCrud.get_writing_prompts(db, limit=limit)
+    prompts = await PracticeCrud.get_writing_prompts(db, limit=limit, question_type=question_type)
 
     # Convert to response format
     prompt_responses = [convert_writing_prompt_to_response(prompt) for prompt in prompts]
