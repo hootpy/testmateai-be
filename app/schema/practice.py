@@ -8,8 +8,7 @@ class QuestionResponse(BaseModel):
     id: uuid.UUID
     question: str
     options: Optional[List[str]] = None  # For multiple choice questions
-    correct: Optional[int] = None  # Index for multiple choice
-    answer: Optional[str] = None  # For completion/short answer
+    correctAnswer: Optional[str] = None  # For multiple choice questions
     type: str
 
 

@@ -21,11 +21,19 @@ class AuthCrud:
         # Ensure user exists (get_or_create strategy)
         await UserCrud.get_or_create_user_by_email(db, email=email)
 
-        # Rate limit based on latest OTP for this email
-        result = await db.execute(select(OtpCode).where(OtpCode.email == email).order_by(OtpCode.created_at.desc()))
+        # Rate limit based on latest OTP for this email (only consider the single latest record)
+        result = await db.execute(
+            select(OtpCode).where(OtpCode.email == email).order_by(OtpCode.created_at.desc()).limit(1)
+        )
         existing: Optional[OtpCode] = result.scalar_one_or_none()
         now = cls._now()
-        if existing and (now - existing.created_at).total_seconds() < SETTINGS.OTP_RATE_LIMIT_SECONDS:
+        # Only reuse the existing OTP within the rate limit window if it is still valid and unused
+        if (
+            existing
+            and not existing.used
+            and existing.expires_at > now
+            and (now - existing.created_at).total_seconds() < SETTINGS.OTP_RATE_LIMIT_SECONDS
+        ):
             return existing
 
         # Create new OTP record
@@ -42,8 +50,12 @@ class AuthCrud:
 
     @classmethod
     async def verify_otp(cls, db: AsyncSession, email: str, code: str) -> Optional[User]:
+        # Always verify against the latest UNUSED OTP for this email
         result = await db.execute(
-            select(OtpCode).where(OtpCode.email == email).order_by(OtpCode.created_at.desc()).limit(1)
+            select(OtpCode)
+            .where(OtpCode.email == email, OtpCode.used.is_(False))
+            .order_by(OtpCode.created_at.desc())
+            .limit(1)
         )
         otp: Optional[OtpCode] = result.scalar_one_or_none()
         if otp is None:
@@ -53,5 +65,10 @@ class AuthCrud:
             return None
         if otp.otp_code != code:
             return None
+
+        # Mark OTP as used to prevent reuse
+        otp.used = True
+        await db.commit()
+
         user = await UserCrud.get_or_create_user_by_email(db, email=email)
         return user

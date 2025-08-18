@@ -15,20 +15,13 @@ def convert_question_to_response(question: PracticeQuestion) -> QuestionResponse
     # Determine question type and format response accordingly
     question_type = question.question_type.lower()
 
-    # Handle different question types
-    if question_type in ["multiple_choice", "mcq"]:
-        # For multiple choice questions, options should be in the options field
-        options = question.options.get("options", []) if question.options else []
-        correct_index = question.options.get("correct_index") if question.options else None
-
-        return QuestionResponse(
-            id=question.id, question=question.question_text, options=options, correct=correct_index, type=question_type
-        )
-    else:
-        # For other question types (completion, short answer, etc.)
-        return QuestionResponse(
-            id=question.id, question=question.question_text, answer=question.correct_answer, type=question_type
-        )
+    return QuestionResponse(
+        id=question.id,
+        question=question.question_text,
+        correctAnswer=question.correct_answer,
+        type=question_type,
+        options=question.options,
+    )
 
 
 def convert_passage_to_response(passage: Passage) -> PassageResponse:
