@@ -1,53 +1,51 @@
 from __future__ import annotations
 
-from typing import Protocol
+import json
+from typing import Any
 
-from openai import AsyncOpenAI
+import httpx
 
-from app.core.config import SETTINGS
-
-
-class LLMProvider(Protocol):
-    async def generate_text(self, prompt: str) -> str:  # pragma: no cover - interface
-        ...
+from app.core.config import Settings
 
 
-class FakeLLMProvider:
-    async def generate_text(self, prompt: str) -> str:
-        return f"Echo: {prompt}"  # Deterministic placeholder so the API works without external keys
+async def generate_text_response(
+    settings: Settings,
+    user_prompt: str,
+    system_prompt: str | None = None,
+) -> dict[str, Any]:
+    if not settings.LLM_API_URL or not settings.LLM_API_KEY:
+        raise RuntimeError("LLM API URL or API KEY is not configured")
 
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {settings.LLM_API_KEY}",
+        "User-Agent": "Enlight/1.4 (com.lightricks.Apollo; build:123; iOS 18.5.0) Alamofire/5.8.0",
+    }
 
-class OpenAILLMProvider:
-    def __init__(self, api_key: str, model: str):
-        self._client = AsyncOpenAI(api_key=api_key)
-        self._model = model
+    sys_prompt = system_prompt if system_prompt is not None else "You are a helpful assistant."
 
-    async def generate_text(self, prompt: str) -> str:
-        # Use the Responses API for a simple text output
-        resp = await self._client.responses.create(model=self._model, input=prompt)
-        # Extract first text segment
-        for item in resp.output or []:
-            if getattr(item, "type", None) == "output_text":
-                return getattr(item, "text", "")
-        # Fallback for older SDKs / different structures
-        try:
-            return resp.output_text  # type: ignore[attr-defined]
-        except Exception:  # pragma: no cover - defensive
-            return ""
+    payload: dict[str, Any] = {
+        "temperature": 0,
+        "messages": [
+            {"role": "system", "content": [{"type": "text", "text": sys_prompt}]},
+            {"role": "user", "content": [{"type": "text", "text": user_prompt}]},
+        ],
+        "model": settings.LLM_MODEL,
+        "response_format": {"type": "json_object"},
+    }
 
+    async with httpx.AsyncClient(timeout=60) as client:
+        resp = await client.post(settings.LLM_API_URL, headers=headers, json=payload)
+        resp.raise_for_status()
+        data = resp.json()
 
-def get_llm_provider() -> LLMProvider:
-    provider_name = SETTINGS.LLM_PROVIDER.lower()
-
-    if provider_name == "openai":
-        api_key = SETTINGS.OPENAI_API_KEY
-        if api_key:
-            try:
-                return OpenAILLMProvider(api_key, SETTINGS.OPENAI_MODEL)
-            except Exception:
-                # If OpenAI SDK is not installed or fails to initialize, fall back to fake
-                return FakeLLMProvider()
-        return FakeLLMProvider()
-
-    # Default: a deterministic fake provider so the system runs without external dependencies
-    return FakeLLMProvider()
+    # Try to parse out a JSON string from choices[0].message.content
+    try:
+        raw_content = data["choices"][0]["message"]["content"]
+        if isinstance(raw_content, str):
+            return json.loads(raw_content)
+        # If already a JSON object
+        return raw_content
+    except Exception:
+        # Fallback: return entire response in a wrapper
+        return {"raw": data}

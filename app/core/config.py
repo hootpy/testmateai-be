@@ -36,10 +36,9 @@ class Settings(BaseSettings):
     JWT_EXPIRE_MINUTES: int = 60 * 24 * 7
 
     # LLM / AI configuration
-    # Default provider is a local fake provider that echoes the prompt
-    LLM_PROVIDER: str = "fake"
-    OPENAI_API_KEY: str | None = None
-    OPENAI_MODEL: str = "gpt-4o-mini"
+    LLM_API_KEY: str | None = None
+    LLM_API_URL: str | None = None
+    LLM_MODEL: str = "vertex_ai/gemini-2.0-flash-001"
 
     class Config:
         case_sensitive = True
