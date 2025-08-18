@@ -11,23 +11,35 @@
 - Ask any question if needed
 - Move any utility functions to utils folder
 
-#### GET /practice/writing
-Get writing practice questions
+
+#### GET /dashboard
+Get comprehensive dashboard data
 
 **Response:**
 ```json
 {
   "success": true,
   "data": {
-    "prompts": [
+    "userStats": {
+      "totalTestsTaken": "number",
+      "averageScore": "number",
+      "bestScore": "number",
+      "studyStreak": "number",
+      "totalStudyTime": "string",
+      "completedLessons": "number",
+      "currentStreak": "number"
+    },
+    "recentActivity": [
       {
         "id": "string (UUID)",
-        "question": "string",
-        "title": "string",
         "type": "string",
-        "timeLimit": "number" (seconds),
-        "wordLimit": "string"
-      }
+        "title": "string",
+        "score": "number",
+        "date": "string (ISO date)",
+        "time": "string",
+        "details": "string"
+      },
+      "take 3 recent activity"
     ]
   }
 }

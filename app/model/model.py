@@ -111,6 +111,7 @@ class UserActivity(Base):
     band: Mapped[Optional[float]] = Column(Numeric(3, 1), nullable=True)
     details: Mapped[Optional[dict]] = Column(JSONB, nullable=True)
     xp_earned: Mapped[int] = Column(Integer, nullable=False, server_default=text("0"))
+    time_spent: Mapped[Optional[int]] = Column(Integer, nullable=True)  # in minutes
     created_at: Mapped[datetime] = Column(
         DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
