@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 from typing import LiteralString, Optional
 
@@ -9,9 +10,12 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
+    Numeric,
     String,
     Text,
+    text,
 )
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm.attributes import Mapped
 from sqlalchemy.sql.schema import Column
 
@@ -21,125 +25,140 @@ from app.setup.database import Base
 class User(Base):
     __tablename__ = "users"
 
-    id: Mapped[int] = Column(Integer, primary_key=True)
+    id: Mapped[uuid.UUID] = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    name: Mapped[str] = Column(String(255), nullable=False)
     email: Mapped[str | LiteralString] = Column(String(255), nullable=False, unique=True)
-    name: Mapped[str] = Column(String(100), nullable=False)
-    level: Mapped[int] = Column(Integer, nullable=False, default=0)
-    xp: Mapped[int] = Column(Integer, nullable=False, default=0)
-    target_score: Mapped[Optional[float]] = Column(Float, nullable=True)
+    current_score: Mapped[Optional[float]] = Column(Numeric(3, 1), nullable=True, server_default=text("0"))
+    target_score: Mapped[Optional[float]] = Column(Numeric(3, 1), nullable=True, server_default=text("7.0"))
     test_date: Mapped[Optional[Date]] = Column(Date, nullable=True)
-    created_at: Mapped[datetime] = Column(DateTime(timezone=True), nullable=False)
-    updated_at: Mapped[datetime] = Column(DateTime(timezone=True), nullable=False)
+    has_previous_test: Mapped[bool] = Column(Boolean, nullable=False, server_default=text("FALSE"))
+    last_test_score: Mapped[Optional[float]] = Column(Numeric(3, 1), nullable=True)
+    level: Mapped[int] = Column(Integer, nullable=False, server_default=text("1"))
+    xp: Mapped[int] = Column(Integer, nullable=False, server_default=text("0"))
+    created_at: Mapped[datetime] = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+    updated_at: Mapped[datetime] = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
 
 
 class OtpCode(Base):
     __tablename__ = "otp_codes"
 
-    id: Mapped[int] = Column(Integer, primary_key=True)
-    email: Mapped[str] = Column(String(255), nullable=False, index=True)
-    otp: Mapped[str] = Column(String(12), nullable=False)
+    id: Mapped[uuid.UUID] = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    email: Mapped[str] = Column(String(255), nullable=False)
+    otp_code: Mapped[str] = Column(String(6), nullable=False)
     expires_at: Mapped[datetime] = Column(DateTime(timezone=True), nullable=False)
-    created_at: Mapped[datetime] = Column(DateTime(timezone=True), nullable=False)
-
-
-class TestSession(Base):
-    __tablename__ = "test_sessions"
-
-    id: Mapped[int] = Column(Integer, primary_key=True)
-    user_id: Mapped[int] = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    test_type: Mapped[str] = Column(String(50), nullable=False)
-    difficulty: Mapped[str] = Column(String(50), nullable=True)
-    score: Mapped[Optional[float]] = Column(Float, nullable=True)
-    band: Mapped[Optional[float]] = Column(Float, nullable=True)
-    time_spent: Mapped[Optional[int]] = Column(Integer, nullable=True)
-    created_at: Mapped[datetime] = Column(DateTime(timezone=True), nullable=False)
-
-
-class TestAnswer(Base):
-    __tablename__ = "test_answers"
-
-    id: Mapped[int] = Column(Integer, primary_key=True)
-    session_id: Mapped[int] = Column(
-        Integer, ForeignKey("test_sessions.id", ondelete="CASCADE"), nullable=False, index=True
+    used: Mapped[bool] = Column(Boolean, nullable=False, server_default=text("FALSE"))
+    created_at: Mapped[datetime] = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
-    question_id: Mapped[int] = Column(
-        Integer, ForeignKey("questions.id", ondelete="CASCADE"), nullable=False, index=True
+
+
+class Passage(Base):
+    __tablename__ = "passages"
+
+    id: Mapped[uuid.UUID] = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    title: Mapped[str] = Column(String(255), nullable=False)
+    content: Mapped[str] = Column(Text, nullable=False)
+    skill: Mapped[str] = Column(String(50), nullable=False)
+    question_type: Mapped[str] = Column(String(50), nullable=False)
+    difficulty_level: Mapped[str] = Column(String(20), nullable=False, server_default=text("'intermediate'"))
+    created_at: Mapped[datetime] = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
-    user_answer: Mapped[Optional[str]] = Column(Text, nullable=True)
-    is_correct: Mapped[Optional[bool]] = Column(Boolean, nullable=True)
-    feedback: Mapped[Optional[str]] = Column(Text, nullable=True)
 
 
-class Achievement(Base):
-    __tablename__ = "achievements"
+class PracticeQuestion(Base):
+    __tablename__ = "practice_questions"
 
-    id: Mapped[int] = Column(Integer, primary_key=True)
-    name: Mapped[str] = Column(String(100), nullable=False, unique=True)
+    id: Mapped[uuid.UUID] = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    skill: Mapped[str] = Column(String(50), nullable=False)
+    question_type: Mapped[str] = Column(String(50), nullable=False)
+    passage_id: Mapped[Optional[uuid.UUID]] = Column(UUID(as_uuid=True), ForeignKey("passages.id"), nullable=True)
+    question_text: Mapped[str] = Column(Text, nullable=False)
+    options: Mapped[Optional[dict]] = Column(JSONB, nullable=True)
+    correct_answer: Mapped[Optional[str]] = Column(Text, nullable=True)
+    explanation: Mapped[Optional[str]] = Column(Text, nullable=True)
+    difficulty_level: Mapped[str] = Column(String(20), nullable=False, server_default=text("'intermediate'"))
+    created_at: Mapped[datetime] = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+
+
+class MockTest(Base):
+    __tablename__ = "mock_tests"
+
+    id: Mapped[uuid.UUID] = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    name: Mapped[str] = Column(String(255), nullable=False)
     description: Mapped[Optional[str]] = Column(Text, nullable=True)
-    icon: Mapped[Optional[str]] = Column(String(255), nullable=True)
-    criteria: Mapped[Optional[dict]] = Column(JSON, nullable=True)
-    created_at: Mapped[datetime] = Column(DateTime(timezone=True), nullable=False)
+    duration: Mapped[int] = Column(Integer, nullable=False)
+    sections: Mapped[dict] = Column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
 
 
-class UserAchievement(Base):
-    __tablename__ = "user_achievements"
+class UserActivity(Base):
+    __tablename__ = "user_activities"
 
-    user_id: Mapped[int] = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
-    achievement_id: Mapped[int] = Column(Integer, ForeignKey("achievements.id", ondelete="CASCADE"), primary_key=True)
-    earned_at: Mapped[datetime] = Column(DateTime(timezone=True), nullable=False)
-
-
-class Question(Base):
-    __tablename__ = "questions"
-
-    id: Mapped[int] = Column(Integer, primary_key=True)
-    test_type: Mapped[str] = Column(String(50), nullable=False)
-    text: Mapped[str] = Column(Text, nullable=False)
+    id: Mapped[uuid.UUID] = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    user_id: Mapped[uuid.UUID] = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     type: Mapped[str] = Column(String(50), nullable=False)
-    options: Mapped[Optional[dict]] = Column(JSON, nullable=True)
-    correct: Mapped[Optional[dict]] = Column(JSON, nullable=True)
-    difficulty: Mapped[Optional[str]] = Column(String(50), nullable=True)
-    topic: Mapped[Optional[str]] = Column(String(100), nullable=True)
-    created_at: Mapped[datetime] = Column(DateTime(timezone=True), nullable=False)
+    practice_type: Mapped[Optional[str]] = Column(String(50), nullable=True)
+    score: Mapped[Optional[float]] = Column(Numeric(3, 1), nullable=True)
+    band: Mapped[Optional[float]] = Column(Numeric(3, 1), nullable=True)
+    details: Mapped[Optional[dict]] = Column(JSONB, nullable=True)
+    xp_earned: Mapped[int] = Column(Integer, nullable=False, server_default=text("0"))
+    created_at: Mapped[datetime] = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+
+
+class Vocabulary(Base):
+    __tablename__ = "vocabulary"
+
+    id: Mapped[uuid.UUID] = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    user_id: Mapped[uuid.UUID] = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    word: Mapped[str] = Column(String(255), nullable=False)
+    definition: Mapped[Optional[str]] = Column(Text, nullable=True)
+    source: Mapped[str] = Column(String(50), nullable=False, server_default=text("'practice'"))
+    reviewed: Mapped[bool] = Column(Boolean, nullable=False, server_default=text("FALSE"))
+    mastered: Mapped[bool] = Column(Boolean, nullable=False, server_default=text("FALSE"))
+    notes: Mapped[Optional[str]] = Column(Text, nullable=True)
+    created_at: Mapped[datetime] = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
 
 
 class StudyPlan(Base):
     __tablename__ = "study_plans"
 
-    id: Mapped[int] = Column(Integer, primary_key=True)
-    user_id: Mapped[int] = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    current_score: Mapped[Optional[float]] = Column(Float, nullable=True)
-    target_score: Mapped[Optional[float]] = Column(Float, nullable=True)
-    test_date: Mapped[Optional[Date]] = Column(Date, nullable=True)
-    plan_data: Mapped[Optional[dict]] = Column(JSON, nullable=True)
-    created_at: Mapped[datetime] = Column(DateTime(timezone=True), nullable=False)
+    id: Mapped[uuid.UUID] = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    user_id: Mapped[uuid.UUID] = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    template_id: Mapped[Optional[uuid.UUID]] = Column(UUID(as_uuid=True), nullable=True)
+    customizations: Mapped[Optional[dict]] = Column(JSONB, nullable=True)
+    current_week: Mapped[int] = Column(Integer, nullable=False, server_default=text("1"))
+    progress: Mapped[Optional[dict]] = Column(JSONB, nullable=True)
+    created_at: Mapped[datetime] = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+    updated_at: Mapped[datetime] = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
 
 
-class UserActivity(Base):
-    __tablename__ = "user_activity"
+class AiFeedback(Base):
+    __tablename__ = "ai_feedback"
 
-    id: Mapped[int] = Column(Integer, primary_key=True)
-    user_id: Mapped[int] = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    action: Mapped[str] = Column(String(100), nullable=False)
-    details: Mapped[Optional[dict]] = Column(JSON, nullable=True)
-    timestamp: Mapped[datetime] = Column(DateTime(timezone=True), nullable=False)
-
-
-class TestAnalytics(Base):
-    __tablename__ = "test_analytics"
-
-    id: Mapped[int] = Column(Integer, primary_key=True)
-    test_type: Mapped[str] = Column(String(50), nullable=False)
-    average_score: Mapped[Optional[float]] = Column(Float, nullable=True)
-    completion_rate: Mapped[Optional[float]] = Column(Float, nullable=True)
-    date: Mapped[Date] = Column(Date, nullable=False)
-
-
-class ContentUsage(Base):
-    __tablename__ = "content_usage"
-
-    id: Mapped[int] = Column(Integer, primary_key=True)
-    content_id: Mapped[str] = Column(String(100), nullable=False)
-    content_type: Mapped[str] = Column(String(50), nullable=False)
-    usage_count: Mapped[int] = Column(Integer, nullable=False, default=0)
-    date: Mapped[Date] = Column(Date, nullable=False)
+    id: Mapped[uuid.UUID] = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    user_id: Mapped[uuid.UUID] = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    activity_id: Mapped[uuid.UUID] = Column(
+        UUID(as_uuid=True), ForeignKey("user_activities.id"), nullable=False, index=True
+    )
+    skill: Mapped[str] = Column(String(50), nullable=False)
+    feedback_data: Mapped[dict] = Column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )

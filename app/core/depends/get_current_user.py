@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from typing import Annotated
 
 import jwt  # type: ignore[import-not-found]
@@ -11,7 +12,6 @@ from app.core.config import SETTINGS
 from app.core.depends.get_session import get_session
 from app.crud.user import UserCrud
 from app.model.model import User
-
 
 security_scheme = HTTPBearer(auto_error=True)
 
@@ -26,7 +26,7 @@ async def get_current_user(
         subject = payload.get("sub")
         if subject is None:
             raise ValueError("Missing sub claim")
-        user_id = int(subject)
+        user_id = uuid.UUID(subject)
     except Exception:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication credentials")
 
